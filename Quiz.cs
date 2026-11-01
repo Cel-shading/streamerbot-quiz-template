@@ -21,7 +21,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 
@@ -216,9 +215,10 @@ public class CPHInline
             int lu;
             if (mots.Length > 1 && int.TryParse(mots[1], out lu) && lu > 0) nb = lu;
 
-            List<Question> toutes = sections.SelectMany(s => s.Questions).ToList();
+            List<Question> toutes = new List<Question>();
+            foreach (Section s in sections) toutes.AddRange(s.Questions);
             Melanger(toutes);
-            Demarrer("Toutes sections", toutes.Take(nb).ToList(), true);
+            Demarrer("Toutes sections", Premiers(toutes, nb), true);
             return;
         }
 
@@ -240,7 +240,7 @@ public class CPHInline
 
         List<Question> liste = new List<Question>(choisie.Questions);
         if (MELANGER_QUESTIONS) Melanger(liste);
-        if (MAX_QUESTIONS_SECTION > 0) liste = liste.Take(MAX_QUESTIONS_SECTION).ToList();
+        if (MAX_QUESTIONS_SECTION > 0) liste = Premiers(liste, MAX_QUESTIONS_SECTION);
         Demarrer(choisie.Nom, liste, false);
     }
 
@@ -254,15 +254,17 @@ public class CPHInline
         if (cible.Length == 0) return null;
 
         // 1) nom exact  2) début du nom  3) contenu dans le nom  (seulement si un seul résultat)
-        Section exacte = sections.FirstOrDefault(s => Normaliser(s.Nom, false) == cible);
-        if (exacte != null) return exacte;
-
-        List<Section> debut = sections.Where(s => Normaliser(s.Nom, false).StartsWith(cible)).ToList();
+        List<Section> debut = new List<Section>();
+        List<Section> contient = new List<Section>();
+        foreach (Section s in sections)
+        {
+            string nom = Normaliser(s.Nom, false);
+            if (nom == cible) return s;
+            if (nom.StartsWith(cible)) debut.Add(s);
+            if (nom.Contains(cible)) contient.Add(s);
+        }
         if (debut.Count == 1) return debut[0];
-
-        List<Section> contient = sections.Where(s => Normaliser(s.Nom, false).Contains(cible)).ToList();
         if (contient.Count == 1) return contient[0];
-
         return null;
     }
 
@@ -351,19 +353,23 @@ public class CPHInline
         AnnulerTimer();
         _etat = Etat.Inactif;
 
-        List<Joueur> classement = _joueurs.Values
-            .OrderByDescending(x => x.Score)
-            .ThenBy(x => x.DernierPoint)
-            .ToList();
+        // Plus de points d'abord ; à égalité, celui qui a atteint son score en premier.
+        List<Joueur> classement = new List<Joueur>(_joueurs.Values);
+        classement.Sort(delegate(Joueur x, Joueur y)
+        {
+            if (x.Score != y.Score) return y.Score.CompareTo(x.Score);
+            return x.DernierPoint.CompareTo(y.DernierPoint);
+        });
 
         if (classement.Count == 0) { Envoyer(MSG_PERSONNE); return; }
 
         List<string> lignes = new List<string>();
         int limite = TOP_CLASSEMENT > 0 ? Math.Min(TOP_CLASSEMENT, classement.Count) : classement.Count;
+        int rang = 1;
         for (int i = 0; i < limite; i++)
         {
             Joueur p = classement[i];
-            int rang = 1 + classement.Count(x => x.Score > p.Score); // ex-aequo = même rang
+            if (i > 0 && p.Score < classement[i - 1].Score) rang = i + 1; // ex-aequo = même rang
             string medaille = rang == 1 ? "🥇" : rang == 2 ? "🥈" : rang == 3 ? "🥉" : rang + ".";
             lignes.Add(medaille + " " + p.Nom + " (" + p.Score + ")");
         }
@@ -413,7 +419,7 @@ public class CPHInline
             if (attendue.Length == 0) continue;
             if (saisie == attendue) return true;
 
-            if (TOLERER_FAUTES_DE_FRAPPE && !attendue.Any(char.IsDigit))
+            if (TOLERER_FAUTES_DE_FRAPPE && !ContientChiffre(attendue))
             {
                 int tolerance = attendue.Length >= 10 ? 2 : attendue.Length >= 5 ? 1 : 0;
                 if (tolerance > 0 && Math.Abs(saisie.Length - attendue.Length) <= tolerance
@@ -424,10 +430,16 @@ public class CPHInline
         return false;
     }
 
-    private static readonly HashSet<string> Articles = new HashSet<string>
+    private static readonly string[] Articles =
     {
         "le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "the", "a", "an"
     };
+
+    private static bool ContientChiffre(string s)
+    {
+        foreach (char c in s) if (char.IsDigit(c)) return true;
+        return false;
+    }
 
     // minuscules, sans accents, sans ponctuation, espaces simples (+ articles retirés en tête)
     private static string Normaliser(string s, bool sansArticles)
@@ -446,9 +458,9 @@ public class CPHInline
             sb.Append(char.IsLetterOrDigit(c) ? c : ' ');
         }
 
-        List<string> mots = sb.ToString().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+        List<string> mots = new List<string>(sb.ToString().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
         if (sansArticles)
-            while (mots.Count > 1 && Articles.Contains(mots[0])) mots.RemoveAt(0);
+            while (mots.Count > 1 && Array.IndexOf(Articles, mots[0]) >= 0) mots.RemoveAt(0);
         return string.Join(" ", mots);
     }
 
@@ -503,7 +515,9 @@ public class CPHInline
             if (ligne.StartsWith("[") && ligne.EndsWith("]"))
             {
                 string nom = ligne.Substring(1, ligne.Length - 2).Trim();
-                courante = sections.FirstOrDefault(s => s.Nom.Equals(nom, StringComparison.OrdinalIgnoreCase));
+                courante = null;
+                foreach (Section s in sections)
+                    if (s.Nom.Equals(nom, StringComparison.OrdinalIgnoreCase)) { courante = s; break; }
                 if (courante == null)
                 {
                     courante = new Section { Nom = nom };
@@ -512,8 +526,10 @@ public class CPHInline
                 continue;
             }
 
-            string[] morceaux = ligne.Split('|').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
-            if (morceaux.Length < 2)
+            List<string> morceaux = new List<string>();
+            foreach (string m in ligne.Split('|'))
+                if (m.Trim().Length > 0) morceaux.Add(m.Trim());
+            if (morceaux.Count < 2)
             {
                 CPH.LogWarn("[Quiz] Ligne " + numLigne + " ignorée (format attendu : question | réponse) : " + ligne);
                 continue;
@@ -526,7 +542,7 @@ public class CPHInline
             }
 
             Question q = new Question { Section = courante.Nom, Texte = morceaux[0] };
-            for (int i = 1; i < morceaux.Length; i++)
+            for (int i = 1; i < morceaux.Count; i++)
             {
                 q.Reponses.Add(morceaux[i]);
                 q.ReponsesNorm.Add(Normaliser(morceaux[i], IGNORER_ARTICLES));
@@ -534,7 +550,9 @@ public class CPHInline
             courante.Questions.Add(q);
         }
 
-        return sections.Where(s => s.Questions.Count > 0).ToList();
+        List<Section> nonVides = new List<Section>();
+        foreach (Section s in sections) if (s.Questions.Count > 0) nonVides.Add(s);
+        return nonVides;
     }
 
     // ============================ UTILITAIRES ============================
@@ -554,7 +572,8 @@ public class CPHInline
     private bool PeutPiloter(bool diffuseur, string loginMin)
     {
         if (diffuseur) return true;
-        if (ADMINS.Any(a => a.Trim().ToLowerInvariant() == loginMin)) return true;
+        foreach (string a in ADMINS)
+            if (a.Trim().ToLowerInvariant() == loginMin) return true;
         if (!MODOS_PEUVENT_LANCER) return false;
         return ArgBool("isModerator") || ArgInt("role") == 3;         // 3 = modérateur
     }
@@ -581,6 +600,11 @@ public class CPHInline
     private static string Remplir(string modele, string cle, string valeur)
     {
         return modele.Replace("{" + cle + "}", valeur);
+    }
+
+    private static List<T> Premiers<T>(List<T> liste, int n)
+    {
+        return liste.GetRange(0, Math.Min(n, liste.Count));
     }
 
     private static void Melanger<T>(List<T> liste)
