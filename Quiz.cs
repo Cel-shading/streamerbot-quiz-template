@@ -41,6 +41,14 @@ public class CPHInline
     private static readonly int DELAI_AVANT_DEBUT_SEC      = 5;  // entre l'annonce et la 1re question
     private static readonly int DELAI_ENTRE_QUESTIONS_SEC  = 5;  // entre une réponse et la question suivante
 
+    // false = les messages du quiz partent de ton compte diffuseur (pas de compte bot séparé).
+    // true  = ils partent du compte bot configuré dans Streamer.bot (sinon repli sur le diffuseur).
+    private static readonly bool ENVOYER_AVEC_COMPTE_BOT   = false;
+
+    // C'est ton compte qui poste les questions et tu connais les réponses : tes messages
+    // (hors commandes !quiz) ne comptent pas comme réponses. Mets true pour tester seul.
+    private static readonly bool DIFFUSEUR_PEUT_REPONDRE   = false;
+
     private static readonly bool MODOS_PEUVENT_LANCER      = true;
     // Pseudos (login Twitch, en minuscules) autorisés en plus, au cas où. Ex : { "monpseudo", "monami" }
     private static readonly string[] ADMINS                = { };
@@ -121,17 +129,23 @@ public class CPHInline
         string pseudo   = Arg("user");
         if (string.IsNullOrEmpty(pseudo)) pseudo = login;
         if (string.IsNullOrEmpty(pseudo)) return true;
-        string cle = !string.IsNullOrEmpty(userId) ? userId : pseudo.ToLowerInvariant();
+        string loginMin = (string.IsNullOrEmpty(login) ? pseudo : login).ToLowerInvariant();
+        string cle = !string.IsNullOrEmpty(userId) ? userId : loginMin;
+        bool diffuseur = EstDiffuseur(userId, loginMin);
 
         string reste;
         if (EstCommandeQuiz(message, out reste))
         {
-            if (PeutPiloter(userId, login, pseudo))
+            if (PeutPiloter(diffuseur, loginMin))
             {
                 lock (_verrou) { TraiterCommande(reste); }
             }
             return true;
         }
+
+        // Les messages du quiz sont postés avec le compte diffuseur : on ignore ce compte
+        // pour que le quiz ne juge jamais ses propres messages (ni les réponses du streamer).
+        if (diffuseur && !DIFFUSEUR_PEUT_REPONDRE) return true;
 
         // Sinon : c'est peut-être une réponse.
         lock (_verrou) { TraiterReponse(cle, pseudo, message); }
@@ -525,11 +539,8 @@ public class CPHInline
 
     // ============================ UTILITAIRES ============================
 
-    private bool PeutPiloter(string userId, string login, string pseudo)
+    private bool EstDiffuseur(string userId, string loginMin)
     {
-        string loginMin = (login ?? pseudo ?? "").ToLowerInvariant();
-        if (ADMINS.Any(a => a.Trim().ToLowerInvariant() == loginMin)) return true;
-
         string idDiffuseur = Arg("broadcastUserId");
         if (!string.IsNullOrEmpty(userId) && userId == idDiffuseur) return true;
 
@@ -537,13 +548,21 @@ public class CPHInline
         if (!string.IsNullOrEmpty(loginDiffuseur) && loginDiffuseur.ToLowerInvariant() == loginMin) return true;
 
         if (ArgBool("isBroadcaster")) return true;
+        return ArgInt("role") >= 4;                                   // 4 = broadcaster
+    }
 
-        int role;
-        bool roleLu = int.TryParse(Arg("role") ?? "", out role);
-        if (roleLu && role >= 4) return true;                         // 4 = broadcaster
-
+    private bool PeutPiloter(bool diffuseur, string loginMin)
+    {
+        if (diffuseur) return true;
+        if (ADMINS.Any(a => a.Trim().ToLowerInvariant() == loginMin)) return true;
         if (!MODOS_PEUVENT_LANCER) return false;
-        return ArgBool("isModerator") || (roleLu && role == 3);       // 3 = modérateur
+        return ArgBool("isModerator") || ArgInt("role") == 3;         // 3 = modérateur
+    }
+
+    private int ArgInt(string nom)
+    {
+        int n;
+        return int.TryParse(Arg(nom) ?? "", out n) ? n : 0;
     }
 
     private string Arg(string nom)
@@ -576,7 +595,7 @@ public class CPHInline
     private void Envoyer(string texte)
     {
         if (texte.Length > 490) texte = texte.Substring(0, 487) + "...";
-        CPH.SendMessage(texte, true, true);
+        CPH.SendMessage(texte, ENVOYER_AVEC_COMPTE_BOT, true);
     }
 
     // Découpe une liste en plusieurs messages pour respecter la limite Twitch (500 caractères).

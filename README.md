@@ -1,6 +1,8 @@
 # Quiz Twitch pour Streamer.bot
 
-Un quiz dans le tchat Twitch : le bot pose les questions, le premier viewer qui écrit la bonne réponse marque un point, puis le bot passe à la question suivante. À la fin, il affiche le classement.
+Un quiz dans le tchat Twitch : Streamer.bot pose les questions, le premier viewer qui écrit la bonne réponse marque un point, puis le quiz passe à la question suivante. À la fin, le classement s'affiche.
+
+Les messages du quiz sont postés avec **ton compte diffuseur** : pas besoin de compte bot séparé.
 
 ## Fichiers
 
@@ -17,7 +19,6 @@ Un quiz dans le tchat Twitch : le bot pose les questions, le premier viewer qui 
 4. **Ajouter le code** : dans le panneau **Sub-Actions** → clic droit → **Add** → **Core** → **C#** → **Execute C# Code**.
    Efface le code d'exemple, colle **tout** le contenu de `Quiz.cs`, clique sur **Compile** (tu dois voir *Compiled successfully*), puis sur **Save and Compile**.
 5. *(Conseillé)* Dans les réglages de l'action, mets **Queue** sur une nouvelle file `Quiz` avec la case **Blocking** cochée : les messages du tchat sont alors traités un par un.
-6. *(Conseillé)* Mets ton compte bot **modérateur** de ta chaîne (`/mod NomDuBot`) pour éviter les limites d'envoi de Twitch.
 
 > ⚠️ Ne crée **pas** de commande `!quiz` dans l'onglet *Commands*. Le script lit lui-même le tchat. Une commande en plus ferait traiter chaque `!quiz` deux fois.
 
@@ -38,18 +39,22 @@ Réservées au streamer et aux modérateurs :
 
 Les viewers n'ont aucune commande à taper : ils **écrivent juste la réponse** dans le tchat.
 
+Tes propres messages (hors commandes `!quiz`) ne comptent pas comme réponses. Tu connais les réponses, et comme c'est ton compte qui poste les questions, le quiz ne doit jamais juger ses propres messages. Pour tester seul, voir [En cas de problème](#en-cas-de-problème).
+
 ### Exemple dans le tchat
 
+Les messages automatiques apparaissent sous ton pseudo :
+
 ```
-Toi      : !quiz random 3
-Bot      : 🎯 Quiz « Toutes sections » : 3 question(s) ! Répondez directement dans le tchat...
-Bot      : ❓ Question 1/3 : Quelle planète est surnommée la planète rouge ? [Sciences]
-Alice    : jupiter
-Bob      : MARS !
-Bot      : ✅ @Bob a trouvé la bonne réponse : « Mars » ! (1 bonne(s) réponse(s))
-Bot      : ❓ Question 2/3 : En quelle année est tombé le mur de Berlin ? [Histoire]
+Toi          : !quiz random 3
+Toi (auto)   : 🎯 Quiz « Toutes sections » : 3 question(s) ! Répondez directement dans le tchat...
+Toi (auto)   : ❓ Question 1/3 : Quelle planète est surnommée la planète rouge ? [Sciences]
+Alice        : jupiter
+Bob          : MARS !
+Toi (auto)   : ✅ @Bob a trouvé la bonne réponse : « Mars » ! (1 bonne(s) réponse(s))
+Toi (auto)   : ❓ Question 2/3 : En quelle année est tombé le mur de Berlin ? [Histoire]
 ...
-Bot      : 🏆 Fin du quiz ! Classement (réponses trouvées) : 🥇 Bob (2) | 🥈 Alice (1)
+Toi (auto)   : 🏆 Fin du quiz ! Classement (réponses trouvées) : 🥇 Bob (2) | 🥈 Alice (1)
 ```
 
 ## Écrire ses questions
@@ -84,6 +89,8 @@ Tout est en haut de `Quiz.cs`, dans le bloc `RÉGLAGES`. Après une modification
 | `TEMPS_PAR_QUESTION_SEC` | `60` | Temps avant que le bot donne la réponse (0 = illimité) |
 | `DELAI_AVANT_DEBUT_SEC` | `5` | Pause entre l'annonce du quiz et la 1re question |
 | `DELAI_ENTRE_QUESTIONS_SEC` | `5` | Pause entre une bonne réponse et la question suivante |
+| `ENVOYER_AVEC_COMPTE_BOT` | `false` | `false` = messages postés avec ton compte diffuseur. `true` = avec un compte bot connecté dans Streamer.bot |
+| `DIFFUSEUR_PEUT_REPONDRE` | `false` | `true` = tes messages comptent comme réponses (utile pour tester seul) |
 | `MODOS_PEUVENT_LANCER` | `true` | Les modérateurs peuvent piloter le quiz |
 | `ADMINS` | vide | Pseudos autorisés en plus, ex. `{ "monpseudo" }` |
 | `TOLERER_FAUTES_DE_FRAPPE` | `true` | Accepte une petite faute de frappe |
@@ -95,5 +102,6 @@ Tous les textes du bot (`MSG_...`) sont modifiables. Garde les variables entre a
 ## En cas de problème
 
 - **« Aucune question trouvée dans le fichier : ... »** : le message indique le chemin cherché. Vérifie que `questions.txt` s'y trouve, ou mets un chemin complet dans `FICHIER_QUESTIONS`.
-- **`!quiz` ne fait rien** : vérifie que le déclencheur est bien *Twitch → Chat → Chat Message* et que l'action est activée. Si le bot ne te reconnaît pas comme streamer, ajoute ton pseudo dans `ADMINS`.
+- **`!quiz` ne fait rien** : vérifie que le déclencheur est bien *Twitch → Chat → Chat Message* et que l'action est activée. Si Streamer.bot ne te reconnaît pas comme streamer, ajoute ton pseudo dans `ADMINS`.
+- **Je teste seul et mes réponses ne comptent pas** : c'est normal. Mets `DIFFUSEUR_PEUT_REPONDRE = true` le temps du test (puis remets `false`), ou réponds avec un second compte Twitch.
 - **Erreurs** : regarde les logs de Streamer.bot (onglet *Logs*). Les messages du script commencent par `[Quiz]`.
