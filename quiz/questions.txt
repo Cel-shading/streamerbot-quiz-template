@@ -1,0 +1,60 @@
+# =====================================================================
+#  QUESTIONS DU QUIZ
+# ---------------------------------------------------------------------
+#  [Nom de la section]          -> commence une nouvelle section
+#  Question ? | Réponse         -> une question et sa réponse
+#  Question ? | Rép 1 | Rép 2   -> plusieurs réponses acceptées
+#                                  (la 1re est celle affichée dans le tchat)
+#  # ...                        -> commentaire (ligne ignorée)
+#
+#  Majuscules, accents, ponctuation et articles (le, la, l', les...)
+#  sont ignorés : "le nil", "Nil" et "nil !" sont tous acceptés.
+#  Les sections sont numérotées dans l'ordre du fichier (1, 2, 3...).
+#  Le fichier est relu à chaque !quiz : pas besoin de redémarrer.
+# =====================================================================
+
+[Géographie]
+Quelle est la capitale de l'Australie ? | Canberra
+Quel est le plus long fleuve de France ? | La Loire
+Sur quel continent se trouve l'Égypte ? | Afrique
+Quelle est la plus haute montagne du monde ? | L'Everest | Mont Everest
+Quel pays a la forme d'une botte ? | L'Italie
+Combien y a-t-il de départements en France métropolitaine ? | 96 | quatre-vingt-seize
+Quelle est la capitale du Canada ? | Ottawa
+
+[Histoire]
+En quelle année a eu lieu la prise de la Bastille ? | 1789
+Quel roi de France était surnommé le Roi-Soleil ? | Louis XIV | Louis 14
+En quelle année l'homme a-t-il marché sur la Lune pour la première fois ? | 1969
+Quel empereur a été exilé sur l'île de Sainte-Hélène ? | Napoléon | Napoléon Ier | Napoléon Bonaparte | Bonaparte
+Quelle reine d'Égypte a séduit Jules César puis Marc Antoine ? | Cléopâtre
+En quelle année est tombé le mur de Berlin ? | 1989
+
+[Sciences]
+Quel est le symbole chimique de l'or ? | Au
+Quelle planète est surnommée la planète rouge ? | Mars
+Combien d'os compte le squelette d'un humain adulte ? | 206
+Quel gaz les plantes absorbent-elles pour la photosynthèse ? | Le dioxyde de carbone | CO2 | gaz carbonique
+Quelle est la formule chimique de l'eau ? | H2O
+Quel est le plus grand organe du corps humain ? | La peau
+
+[Cinéma]
+Qui a réalisé le film Titanic (1997) ? | James Cameron | Cameron
+Quel sorcier porte une cicatrice en forme d'éclair sur le front ? | Harry Potter | Harry
+Quel acteur incarne Jack Sparrow dans Pirates des Caraïbes ? | Johnny Depp | Depp
+Comment s'appelle le lionceau héros du Roi Lion ? | Simba
+Dans quelle saga entend-on la réplique « Non, je suis ton père » ? | Star Wars | La Guerre des étoiles
+
+[Jeux vidéo]
+Comment s'appelle le célèbre plombier moustachu de Nintendo ? | Mario
+Quel jeu de blocs en monde ouvert a été créé par Notch ? | Minecraft
+De quelle couleur est Sonic le hérisson ? | Bleu
+Quel Pokémon porte le numéro 25 dans le Pokédex ? | Pikachu
+De combien de carrés est composée chaque pièce de Tetris ? | 4 | quatre
+
+[Musique]
+Quel groupe britannique a chanté « Bohemian Rhapsody » ? | Queen
+Combien de cordes a une guitare classique ? | 6 | six
+Quel chanteur était surnommé le « King of Pop » ? | Michael Jackson | Jackson
+De quel pays vient le groupe ABBA ? | La Suède
+Quel instrument à cordes joue-t-on avec un archet, calé sous le menton ? | Le violon | Alto
